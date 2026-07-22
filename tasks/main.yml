@@ -1,4 +1,11 @@
 ---
+- name: Verify Linux distribution
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Rocky' and ansible_facts['distribution_major_version'] in ['8', '9']
+    fail_msg: "Supports RockyLinux 8 or 9. Detected: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_major_version'] }}."
+    success_msg: "Running supported {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_major_version'] }} distribution."
+
 - name: Check whether the Tailscale package is already present
   ansible.builtin.command: tailscale version
   register: tailscale_version
