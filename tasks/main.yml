@@ -16,6 +16,10 @@
     fail_msg: "Input validation failed. See README.md for information on required inputs and their format."
     success_msg: "User input configuration is valid."
 
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
 - name: Check whether the Tailscale package is already present
   ansible.builtin.command: tailscale version
   register: tailscale_version
@@ -89,10 +93,6 @@
     path: "{{ tailscale_authkey_file }}"
     state: absent
 
-- name: Gather installed package facts
-  ansible.builtin.package_facts:
-    manager: auto
-
 - name: Download the HTCondor bootstrap installer
   ansible.builtin.get_url:
     url: https://get.htcondor.org
@@ -148,23 +148,13 @@
     owner: root
     group: root
 
-- name: Install Docker Engine (unpinned, latest available at install time)
+- name: Install Docker Engine
   ansible.builtin.dnf:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
     state: present
-  when: not htcondor_docker_package_version
-
-- name: Install Docker Engine
-  ansible.builtin.dnf:
-    name:
-      - "docker-ce-{{ htcondor_docker_package_version }}"
-      - "docker-ce-cli-{{ htcondor_docker_package_version }}"
-      - containerd.io
-    state: present
-  when: htcondor_docker_package_version
 
 - name: Create systemd drop-in directory for docker.socket
   ansible.builtin.file:
@@ -187,11 +177,14 @@
     - Reload systemd units
     - Restart docker
 
-- name: Ensure docker.service is enabled and started
+- name: Ensure docker service is enabled and started
   ansible.builtin.systemd:
-    name: docker
+    name: "{{ item }}"
     enabled: true
     state: started
+  loop:
+    - docker
+    - containerd
 
 - name: Check whether the isolated Docker bridge network already exists
   ansible.builtin.command: "docker network inspect {{ htcondor_docker_network_name }}"
