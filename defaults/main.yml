@@ -1,1 +1,9 @@
 tailscale_authkey_file: /run/tailscale-authkey
+htcondor_config_path: /etc/condor/config.d/01-execute.config
+htcondor_slots_config_path: /etc/condor/config.d/02-slots.config
+htcondor_network_interface: tailscale0
+htcondor_admin_users:
+  - murdaca
+htcondor_num_slots: 1
+htcondor_slot_type_1_share: "100%"
+htcondor_slot_type_1_partitionable: true

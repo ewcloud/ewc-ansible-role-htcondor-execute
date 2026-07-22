@@ -104,3 +104,21 @@
     name: condor
     enabled: true
     state: started
+
+- name: Deploy HTCondor execute-node configuration
+  ansible.builtin.template:
+    src: 01-execute.config.j2
+    dest: "{{ htcondor_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reconfigure HTCondor
+
+- name: Deploy HTCondor dynamic slots configuration
+  ansible.builtin.template:
+    src: 02-slots.config.j2
+    dest: "{{ htcondor_slots_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart HTCondor
