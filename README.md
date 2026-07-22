@@ -85,16 +85,34 @@ ansible-playbook -i inventory.yml playbook.yml
 
 ## SW Bill of Materials (SBoM)
 
-The following components will be included in the resulting environment:
+Third-party components used in the resulting environment.
 
+### RockyLinux 8 Environment
+
+The following components will be included in the resulting environment:
 
 | Component | Version | License | Home URL |
 |------|---------|---------|--------------|
-| tailscale | 1.x | BSD-3-Clause | https://github.com/tailscale/tailscale |
+| tailscale | 1.98 | BSD-3-Clause | https://github.com/tailscale/tailscale |
 | htcondor | 25.x | Apache-2.0  | https://github.com/htcondor/htcondor |
-| docker-ce | 29.x | Apache-2.0  | https://github.com/moby/moby |
-| docker-ce-cli | 29.x | Apache-2.0  | https://github.com/docker/cli |
-| containerd.io | 2.x | Apache-2.0  | https://github.com/containerd/containerd |
+| docker-ce | 26.1 | Apache-2.0  | https://github.com/moby/moby |
+| docker-ce-cli | 26.1 | Apache-2.0  | https://github.com/docker/cli |
+| containerd.io | 1.6 | Apache-2.0  | https://github.com/containerd/containerd |
+| cronie-noanacron | 1.5 | MIT  | https://github.com/cronie-crond/cronie |
+
+### RockyLinux 9 Environment
+
+The following components will be included in the resulting environment:
+
+| Component | Version | License | Home URL |
+|------|---------|---------|--------------|
+| tailscale | 1.98 | BSD-3-Clause | https://github.com/tailscale/tailscale |
+| htcondor | 25.x | Apache-2.0  | https://github.com/htcondor/htcondor |
+| docker-ce | 29.6 | Apache-2.0  | https://github.com/moby/moby |
+| docker-ce-cli | 29.6 | Apache-2.0  | https://github.com/docker/cli |
+| containerd.io | 2.2 | Apache-2.0  | https://github.com/containerd/containerd |
+| cronie-noanacron | 1.5 | MIT  | https://github.com/cronie-crond/cronie |
+
 
 ## Changelog
 All notable changes (i.e. fixes, features and breaking changes) are documented 
