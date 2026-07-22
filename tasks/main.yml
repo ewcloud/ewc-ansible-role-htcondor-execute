@@ -71,3 +71,36 @@
   ansible.builtin.file:
     path: "{{ tailscale_authkey_file }}"
     state: absent
+
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Download the HTCondor bootstrap installer
+  ansible.builtin.get_url:
+    url: https://get.htcondor.org
+    dest: /tmp/get_htcondor.sh
+    mode: "0755"
+    owner: root
+    group: root
+  when: "'condor' not in ansible_facts.packages"
+
+- name: Install HTCondor as an execute node
+  ansible.builtin.command:
+    cmd: >-
+      /tmp/get_htcondor.sh --no-dry-run --channel stable --execute "{{ htcondor_cm_external_ip }}"
+      --password "{{ htcondor_password }}"
+  no_log: true
+  changed_when: true
+  when: "'condor' not in ansible_facts.packages"
+
+- name: Remove the temporary installer script
+  ansible.builtin.file:
+    path: /tmp/get_htcondor.sh
+    state: absent
+
+- name: Ensure the condor service is enabled and started
+  ansible.builtin.systemd:
+    name: condor
+    enabled: true
+    state: started
