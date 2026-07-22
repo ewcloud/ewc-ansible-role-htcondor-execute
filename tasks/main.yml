@@ -1,0 +1,254 @@
+---
+- name: Verify Linux distribution
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Rocky' and ansible_facts['distribution_major_version'] in ['8', '9']
+    fail_msg: "Supports RockyLinux 8 or 9. Detected: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_major_version'] }}."
+    success_msg: "Running supported {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_major_version'] }} distribution."
+
+- name: Validate user inputs
+  ansible.builtin.assert:
+    that:
+      - headscale_preauthkey is string and headscale_preauthkey is defined and headscale_preauthkey != ''
+      - headscale_login_server is string and headscale_login_server is defined and headscale_login_server != ''
+      - htcondor_cm_external_ip is string and htcondor_cm_external_ip is defined and htcondor_cm_external_ip != ''
+      - htcondor_password is string and htcondor_password is defined and htcondor_password != ''
+    fail_msg: "Input validation failed. See README.md for information on required inputs and their format."
+    success_msg: "User input configuration is valid."
+
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Check whether the Tailscale package is already present
+  ansible.builtin.command: tailscale version
+  register: tailscale_version
+  changed_when: false
+  failed_when: false
+
+- name: Download the Tailscale bootstrap installer
+  ansible.builtin.get_url:
+    url: https://tailscale.com/install.sh
+    dest: /tmp/tailscale_install.sh
+    mode: "0755"
+    owner: root
+    group: root
+  when: tailscale_version.rc != 0
+
+- name: Install Tailscale client
+  ansible.builtin.command:
+    cmd: >-
+      /tmp/tailscale_install.sh
+  no_log: true
+  changed_when: true
+  when: tailscale_version.rc != 0
+
+- name: Remove the temporary Tailscale installer script
+  ansible.builtin.file:
+    path: /tmp/tailscale_install.sh
+    state: absent
+
+- name: Ensure the tailscaled service is enabled and running
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: true
+    state: started
+
+- name: Check current Tailscale connection state
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Determine whether enrollment is required
+  ansible.builtin.set_fact:
+    tailscale_needs_enrollment: >-
+      {{
+        tailscale_status.rc != 0 or
+        (tailscale_status.stdout | from_json).BackendState != 'Running'
+      }}
+
+- name: Write the Headscale pre-auth key to a transient, root-only file
+  ansible.builtin.copy:
+    content: "{{ headscale_preauthkey }}"
+    dest: "{{ tailscale_authkey_file }}"
+    mode: "0600"
+    owner: root
+    group: root
+  no_log: true
+  when: tailscale_needs_enrollment
+
+- name: Enroll node into the Headscale VPN server
+  ansible.builtin.command:
+    cmd: >-
+      tailscale up
+      --login-server {{ headscale_login_server }}
+      --authkey file:{{ tailscale_authkey_file }}
+  no_log: true
+  changed_when: true
+  when: tailscale_needs_enrollment
+
+- name: Remove the transient pre-auth key file
+  ansible.builtin.file:
+    path: "{{ tailscale_authkey_file }}"
+    state: absent
+
+- name: Download the HTCondor bootstrap installer
+  ansible.builtin.get_url:
+    url: https://get.htcondor.org
+    dest: /tmp/get_htcondor.sh
+    mode: "0755"
+    owner: root
+    group: root
+  when: "'condor' not in ansible_facts.packages"
+
+- name: Install HTCondor as an execute node
+  ansible.builtin.command:
+    cmd: >-
+      /tmp/get_htcondor.sh --no-dry-run --channel stable --execute "{{ htcondor_cm_external_ip }}"
+      --password "{{ htcondor_password }}"
+  no_log: true
+  changed_when: true
+  when: "'condor' not in ansible_facts.packages"
+
+- name: Remove the temporary installer script
+  ansible.builtin.file:
+    path: /tmp/get_htcondor.sh
+    state: absent
+
+- name: Ensure the condor service is enabled and started
+  ansible.builtin.systemd:
+    name: condor
+    enabled: true
+    state: started
+
+- name: Deploy HTCondor execute-node configuration
+  ansible.builtin.template:
+    src: 01-execute.config.j2
+    dest: "{{ htcondor_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reconfigure HTCondor
+
+- name: Deploy HTCondor dynamic slots configuration
+  ansible.builtin.template:
+    src: 02-slots.config.j2
+    dest: "{{ htcondor_slots_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart HTCondor
+
+- name: Add the Docker CE yum repository definition
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Install Docker Engine
+  ansible.builtin.dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+
+- name: Create systemd drop-in directory for docker.socket
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.socket.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Grant the condor group access to the Docker socket
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.socket.d/override.conf
+    content: |
+      [Socket]
+      SocketGroup=condor
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd units
+    - Restart docker
+
+- name: Ensure docker service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - docker
+    - containerd
+
+- name: Check whether the isolated Docker bridge network already exists
+  ansible.builtin.command: "docker network inspect {{ htcondor_docker_network_name }}"
+  register: docker_network
+  changed_when: false
+  failed_when: false
+
+- name: Create the isolated Docker bridge network for condor jobs
+  ansible.builtin.command: >-
+    docker network create --driver bridge
+    -o com.docker.network.bridge.name={{ htcondor_docker_network_name }}
+    {{ htcondor_docker_network_name }}
+  when: docker_network.rc != 0
+  changed_when: true
+
+- name: Block SSH connections originating from the condor Docker network
+  ansible.builtin.iptables:
+    chain: INPUT
+    in_interface: "{{ htcondor_docker_network_name }}"
+    protocol: tcp
+    destination_port: 22
+    jump: DROP
+  when: htcondor_docker_block_ssh | bool
+
+- name: Install cron for scheduled Docker cleanup
+  ansible.builtin.dnf:
+    name: cronie-noanacron
+    state: present
+
+- name: Ensure crond is enabled and started
+  ansible.builtin.systemd:
+    name: crond
+    enabled: true
+    state: started
+
+- name: Schedule weekly Docker volume cleanup
+  ansible.builtin.cron:
+    name: "clean docker volumes"
+    minute: "15"
+    hour: "1"
+    weekday: "6"
+    job: >-
+      /usr/bin/docker volume prune --filter 'until=168h' --force
+      | grep -v 'Total reclaimed space: 0B'
+
+- name: Schedule weekly Docker image cleanup
+  ansible.builtin.cron:
+    name: "clean docker images"
+    minute: "20"
+    hour: "1"
+    weekday: "6"
+    job: >-
+      /usr/bin/docker image prune -a --filter 'until=168h' --force
+      | grep -v 'Total reclaimed space: 0B'
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: List installed package versions
+  ansible.builtin.debug:
+    msg:
+      - "tailscale: {{ ansible_facts.packages['tailscale'][0].version }}-{{ ansible_facts.packages['tailscale'][0].release }}"
+      - "htcondor: {{ ansible_facts.packages['htcondor-release'][0].version }}-{{ ansible_facts.packages['htcondor-release'][0].release }}"
+      - "docker-ce: {{ ansible_facts.packages['docker-ce'][0].version }}-{{ ansible_facts.packages['docker-ce'][0].release }}"
+      - "docker-ce-cli: {{ ansible_facts.packages['docker-ce-cli'][0].version }}-{{ ansible_facts.packages['docker-ce-cli'][0].release }}"
+      - "containerd.io: {{ ansible_facts.packages['containerd.io'][0].version }}-{{ ansible_facts.packages['containerd.io'][0].release }}"
