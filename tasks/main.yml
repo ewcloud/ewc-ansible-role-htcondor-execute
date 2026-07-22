@@ -122,3 +122,110 @@
     group: root
     mode: "0644"
   notify: Restart HTCondor
+
+- name: Add the Docker CE yum repository definition
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Install Docker Engine (unpinned, latest available at install time)
+  ansible.builtin.dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+  when: not htcondor_docker_package_version
+
+- name: Install Docker Engine
+  ansible.builtin.dnf:
+    name:
+      - "docker-ce-{{ htcondor_docker_package_version }}"
+      - "docker-ce-cli-{{ htcondor_docker_package_version }}"
+      - containerd.io
+    state: present
+  when: htcondor_docker_package_version
+
+- name: Create systemd drop-in directory for docker.socket
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.socket.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Grant the condor group access to the Docker socket
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.socket.d/override.conf
+    content: |
+      [Socket]
+      SocketGroup=condor
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd units
+    - Restart docker
+
+- name: Ensure docker.service is enabled and started
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Check whether the isolated Docker bridge network already exists
+  ansible.builtin.command: "docker network inspect {{ htcondor_docker_network_name }}"
+  register: docker_network
+  changed_when: false
+  failed_when: false
+
+- name: Create the isolated Docker bridge network for condor jobs
+  ansible.builtin.command: >-
+    docker network create --driver bridge
+    -o com.docker.network.bridge.name={{ htcondor_docker_network_name }}
+    {{ htcondor_docker_network_name }}
+  when: docker_network.rc != 0
+  changed_when: true
+
+- name: Block SSH connections originating from the condor Docker network
+  ansible.builtin.iptables:
+    chain: INPUT
+    in_interface: "{{ htcondor_docker_network_name }}"
+    protocol: tcp
+    destination_port: 22
+    jump: DROP
+  when: htcondor_docker_block_ssh | bool
+
+- name: Install cron for scheduled Docker cleanup
+  ansible.builtin.dnf:
+    name: cronie-noanacron
+    state: present
+
+- name: Ensure crond is enabled and started
+  ansible.builtin.systemd:
+    name: crond
+    enabled: true
+    state: started
+
+- name: Schedule weekly Docker volume cleanup
+  ansible.builtin.cron:
+    name: "clean docker volumes"
+    minute: "15"
+    hour: "1"
+    weekday: "6"
+    job: >-
+      /usr/bin/docker volume prune --filter 'until=168h' --force
+      | grep -v 'Total reclaimed space: 0B'
+
+- name: Schedule weekly Docker image cleanup
+  ansible.builtin.cron:
+    name: "clean docker images"
+    minute: "20"
+    hour: "1"
+    weekday: "6"
+    job: >-
+      /usr/bin/docker image prune -a --filter 'until=168h' --force
+      | grep -v 'Total reclaimed space: 0B'

@@ -7,3 +7,7 @@ htcondor_admin_users:
 htcondor_num_slots: 1
 htcondor_slot_type_1_share: "100%"
 htcondor_slot_type_1_partitionable: true
+htcondor_docker_enabled: true
+htcondor_docker_package_version: "" # pin e.g. "3:26.1.4-1.el9" ; empty = latest at first install only
+htcondor_docker_network_name: condor_network
+htcondor_docker_block_ssh: true
