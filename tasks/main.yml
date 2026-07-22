@@ -239,3 +239,16 @@
     job: >-
       /usr/bin/docker image prune -a --filter 'until=168h' --force
       | grep -v 'Total reclaimed space: 0B'
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: List installed package versions
+  ansible.builtin.debug:
+    msg:
+      - "tailscale: {{ ansible_facts.packages['tailscale'][0].version }}-{{ ansible_facts.packages['tailscale'][0].release }}"
+      - "htcondor: {{ ansible_facts.packages['htcondor-release'][0].version }}-{{ ansible_facts.packages['htcondor-release'][0].release }}"
+      - "docker-ce: {{ ansible_facts.packages['docker-ce'][0].version }}-{{ ansible_facts.packages['docker-ce'][0].release }}"
+      - "docker-ce-cli: {{ ansible_facts.packages['docker-ce-cli'][0].version }}-{{ ansible_facts.packages['docker-ce-cli'][0].release }}"
+      - "containerd.io: {{ ansible_facts.packages['containerd.io'][0].version }}-{{ ansible_facts.packages['containerd.io'][0].release }}"
