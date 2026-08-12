@@ -4,7 +4,7 @@ CONDOR_HOST = {{ htcondor_cm_external_ip }}
 NETWORK_INTERFACE = {{ htcondor_network_interface }}
 BIND_ALL_INTERFACES = false
 
-ALLOW_ADMINISTRATOR = {{ htcondor_admin_users | map('regex_replace', '^(.*)$', '\1@*') | join(', ') }}, condor@$(TRUST_DOMAIN)
+ALLOW_ADMINISTRATOR = {{ htcondor_admin_users | map('regex_replace', '^(.*)$', '\\1@*') | join(', ') }}, condor@$(TRUST_DOMAIN)
 ALLOW_WRITE = *@$(FULL_HOSTNAME), condor@$(TRUST_DOMAIN)
 CONDOR_ADMIN = {{ htcondor_admin_users[0] }}@$(FULL_HOSTNAME)
 QUEUE_SUPER_USERS = {{ htcondor_admin_users | join(', ') }}, condor
