@@ -7,7 +7,5 @@ htcondor_admin_users:
 htcondor_num_slots: 1
 htcondor_slot_type_1_share: "100%"
 htcondor_slot_type_1_partitionable: true
-htcondor_docker_enabled: true
 htcondor_docker_network_name: condor_network
 htcondor_docker_block_ssh: true
-singularity_enabled: false

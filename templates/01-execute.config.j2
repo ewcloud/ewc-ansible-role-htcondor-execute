@@ -12,13 +12,7 @@ QUEUE_SUPER_USERS = {{ htcondor_admin_users | join(', ') }}, condor
 ENABLE_PERSISTENT_CONFIG = true
 PERSISTENT_CONFIG_DIR = /etc/condor/persistent
 
-{% if htcondor_docker_enabled | bool %}
-# --- Docker universe -----------------------------------------------------
 DOCKER_EXTRA_ARGUMENTS = --network={{ htcondor_docker_network_name }}
-{% endif %}
 
-{% if singularity_enabled | bool %}
-# --- Singularity/Apptainer container universe -----------------------------
 SINGULARITY_JOB = !isUndefined(TARGET.SingularityImage)
 SINGULARITY_IMAGE_EXPR = TARGET.SingularityImage
-{% endif %}
