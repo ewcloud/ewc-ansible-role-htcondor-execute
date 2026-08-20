@@ -1,4 +1,4 @@
-# HtCondor Execute Node Ansible Role
+# HTCondor Execute Node Ansible Role
 
 This repository contains a configuration template 
 (i.e. an [Ansible Role](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html)) 
@@ -81,6 +81,7 @@ ansible-playbook -i inventory.yml playbook.yml
 | headscale_preauthkey        | Credentials of the VPN server.                                                                     | `string` | n/a      |    yes   |
 | htcondor_cm_external_ip     | IP Address of the HTCondor Manager node to which this submit node reports to. Example: `10.0.0.15` | `string` | n/a      |    yes   |
 | htcondor_password           | Password to authenticate against HTCondor Execute node pool                                        | `string` | n/a      |    yes   |
+| harbor_auth_token       | Token for authentication when pulling private container images from EWC Container registry         | `string` | n/a      |    yes   |
 
 
 ## SW Bill of Materials (SBoM)

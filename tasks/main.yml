@@ -13,6 +13,7 @@
       - headscale_login_server is string and headscale_login_server is defined and headscale_login_server != ''
       - htcondor_cm_external_ip is string and htcondor_cm_external_ip is defined and htcondor_cm_external_ip != ''
       - htcondor_password is string and htcondor_password is defined and htcondor_password != ''
+      - harbor_auth_token is string and harbor_auth_token is defined and harbor_auth_token != ''
     fail_msg: "Input validation failed. See README.md for information on required inputs and their format."
     success_msg: "User input configuration is valid."
 
@@ -169,6 +170,14 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Write Harbor auth token to persistent file for private docker image pulling
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ harbor_auth_token_file }}"
+    owner: condor
+    group: condor
+    mode: "0644"
 
 - name: Grant the condor group access to the Docker socket
   ansible.builtin.copy:
