@@ -109,9 +109,7 @@
 
 - name: Install HTCondor as an execute node
   ansible.builtin.command:
-    cmd: >-
-      /tmp/get_htcondor.sh --no-dry-run --channel stable --execute "{{ htcondor_cm_external_ip }}"
-      --password "{{ htcondor_password }}"
+    cmd: /tmp/get_htcondor.sh --no-dry-run --channel stable --execute "{{ htcondor_cm_external_ip }}" --password "{{ htcondor_password }}"
   no_log: true
   changed_when: true
   when: "'condor' not in ansible_facts.packages"
