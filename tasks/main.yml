@@ -13,40 +13,51 @@
       - headscale_login_server is string and headscale_login_server is defined and headscale_login_server != ''
       - htcondor_cm_external_ip is string and htcondor_cm_external_ip is defined and htcondor_cm_external_ip != ''
       - htcondor_password is string and htcondor_password is defined and htcondor_password != ''
+      - harbor_auth_token is string and harbor_auth_token is defined and harbor_auth_token != ''
     fail_msg: "Input validation failed. See README.md for information on required inputs and their format."
     success_msg: "User input configuration is valid."
+
+- name: Pin package versions prior to installation
+  ansible.builtin.set_fact:
+    package_versions:
+      rockylinux_8:
+        tailscale: tailscale-1.98.9-1
+        docker-ce: docker-ce-26.1.3-1.el8
+        docker-ce-cli: docker-ce-cli-26.1.3-1.el8
+        containerd.io: containerd.io-1.6.32-3.1.el8
+        cronie-noanacron: cronie-noanacron-1.5.2-10.el8
+      rockylinux_9:
+        tailscale: tailscale-1.98.9-1
+        docker-ce: docker-ce-29.6.2-1.el9
+        docker-ce-cli: docker-ce-cli-29.6.2-1.el9
+        containerd.io: containerd.io-2.2.6-1.el9
+        cronie-noanacron: cronie-noanacron-1.5.7-16.el9
 
 - name: Gather installed package facts
   ansible.builtin.package_facts:
     manager: auto
 
-- name: Check whether the Tailscale package is already present
-  ansible.builtin.command: tailscale version
-  register: tailscale_version
-  changed_when: false
-  failed_when: false
+- name: Ensure dnf-plugins-core is enabled
+  ansible.builtin.dnf:
+    name: dnf-plugins-core
+    state: present
 
-- name: Download the Tailscale bootstrap installer
+- name: Add the Tailscale yum repository definition
   ansible.builtin.get_url:
-    url: https://tailscale.com/install.sh
-    dest: /tmp/tailscale_install.sh
-    mode: "0755"
+    url: "https://pkgs.tailscale.com/stable/rhel/{{ ansible_facts['distribution_major_version'] }}/tailscale.repo"
+    dest: /etc/yum.repos.d/tailscale.repo
+    mode: "0644"
     owner: root
     group: root
-  when: tailscale_version.rc != 0
+  when: "'tailscale' not in ansible_facts.packages"
 
-- name: Install Tailscale client
-  ansible.builtin.command:
-    cmd: >-
-      /tmp/tailscale_install.sh
-  no_log: true
-  changed_when: true
-  when: tailscale_version.rc != 0
-
-- name: Remove the temporary Tailscale installer script
-  ansible.builtin.file:
-    path: /tmp/tailscale_install.sh
-    state: absent
+- name: Install the Tailscale package
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+    allow_downgrade: true
+  loop:
+    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['tailscale'] }}"
 
 - name: Ensure the tailscaled service is enabled and running
   ansible.builtin.systemd:
@@ -104,9 +115,7 @@
 
 - name: Install HTCondor as an execute node
   ansible.builtin.command:
-    cmd: >-
-      /tmp/get_htcondor.sh --no-dry-run --channel stable --execute "{{ htcondor_cm_external_ip }}"
-      --password "{{ htcondor_password }}"
+    cmd: /tmp/get_htcondor.sh --no-dry-run --channel stable --execute "{{ htcondor_cm_external_ip }}" --password "{{ htcondor_password }}"
   no_log: true
   changed_when: true
   when: "'condor' not in ansible_facts.packages"
@@ -151,10 +160,13 @@
 - name: Install Docker Engine
   ansible.builtin.dnf:
     name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
+      - "{{ item }}"
     state: present
+    allow_downgrade: true
+  loop:
+    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['docker-ce'] }}"
+    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['docker-ce-cli'] }}"
+    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['containerd.io'] }}"
 
 - name: Create systemd drop-in directory for docker.socket
   ansible.builtin.file:
@@ -163,6 +175,22 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Create directory for Harbor auth token storage
+  ansible.builtin.file:
+    path: /var/lib/condor/.docker
+    state: directory
+    owner: condor
+    group: condor
+    recurse: true
+
+- name: Write Harbor auth token to persistent file for private docker image pulling
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ harbor_auth_token_file }}"
+    owner: condor
+    group: condor
+    mode: "0644"
 
 - name: Grant the condor group access to the Docker socket
   ansible.builtin.copy:
@@ -211,8 +239,11 @@
 
 - name: Install cron for scheduled Docker cleanup
   ansible.builtin.dnf:
-    name: cronie-noanacron
+    name: "{{ item }}"
     state: present
+    allow_downgrade: true
+  loop:
+    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['cronie-noanacron'] }}"
 
 - name: Ensure crond is enabled and started
   ansible.builtin.systemd:
@@ -252,3 +283,4 @@
       - "docker-ce: {{ ansible_facts.packages['docker-ce'][0].version }}-{{ ansible_facts.packages['docker-ce'][0].release }}"
       - "docker-ce-cli: {{ ansible_facts.packages['docker-ce-cli'][0].version }}-{{ ansible_facts.packages['docker-ce-cli'][0].release }}"
       - "containerd.io: {{ ansible_facts.packages['containerd.io'][0].version }}-{{ ansible_facts.packages['containerd.io'][0].release }}"
+      - "cronie-noanacron: {{ ansible_facts.packages['cronie-noanacron'][0].version }}-{{ ansible_facts.packages['cronie-noanacron'][0].release }}"

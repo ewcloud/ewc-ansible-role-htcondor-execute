@@ -1,11 +1,11 @@
-# HtCondor Execute Node Ansible Role
+# HTCondor Execute Node Ansible Role
 
 This repository contains a configuration template 
 (i.e. an [Ansible Role](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html)) 
 to customize your environment in the
 [European Weather Cloud (EWC)](https://europeanweather.cloud/).
 The template is designed to:
-* Configure a pre-existing virtual machine, running RockyLinux version 8 or 9, and with a minimum recommended 4 CPU cores and 8GB of RAM, such that it:
+* Configure a pre-existing virtual machine, running RockyLinux version 8 or 9, and with a minimum recommended 8 CPU cores and 64GB of RAM, such that it:
     * Enables users to include their VMs into to a shared pool of HTCondor Execute nodes running within the EWC.
 
 ## Copyright and License
@@ -81,20 +81,39 @@ ansible-playbook -i inventory.yml playbook.yml
 | headscale_preauthkey        | Credentials of the VPN server.                                                                     | `string` | n/a      |    yes   |
 | htcondor_cm_external_ip     | IP Address of the HTCondor Manager node to which this submit node reports to. Example: `10.0.0.15` | `string` | n/a      |    yes   |
 | htcondor_password           | Password to authenticate against HTCondor Execute node pool                                        | `string` | n/a      |    yes   |
+| harbor_auth_token       | Token for authentication when pulling private container images from EWC Container registry         | `string` | n/a      |    yes   |
 
 
 ## SW Bill of Materials (SBoM)
 
-The following components will be included in the resulting environment:
+Third-party components used in the resulting environment.
 
+### RockyLinux 8 Environment
+
+The following components will be included in the resulting environment:
 
 | Component | Version | License | Home URL |
 |------|---------|---------|--------------|
-| tailscale | 1.x | BSD-3-Clause | https://github.com/tailscale/tailscale |
+| tailscale | 1.98 | BSD-3-Clause | https://github.com/tailscale/tailscale |
 | htcondor | 25.x | Apache-2.0  | https://github.com/htcondor/htcondor |
-| docker-ce | 29.x | Apache-2.0  | https://github.com/moby/moby |
-| docker-ce-cli | 29.x | Apache-2.0  | https://github.com/docker/cli |
-| containerd.io | 2.x | Apache-2.0  | https://github.com/containerd/containerd |
+| docker-ce | 26.1 | Apache-2.0  | https://github.com/moby/moby |
+| docker-ce-cli | 26.1 | Apache-2.0  | https://github.com/docker/cli |
+| containerd.io | 1.6 | Apache-2.0  | https://github.com/containerd/containerd |
+| cronie-noanacron | 1.5 | MIT  | https://github.com/cronie-crond/cronie |
+
+### RockyLinux 9 Environment
+
+The following components will be included in the resulting environment:
+
+| Component | Version | License | Home URL |
+|------|---------|---------|--------------|
+| tailscale | 1.98 | BSD-3-Clause | https://github.com/tailscale/tailscale |
+| htcondor | 25.x | Apache-2.0  | https://github.com/htcondor/htcondor |
+| docker-ce | 29.6 | Apache-2.0  | https://github.com/moby/moby |
+| docker-ce-cli | 29.6 | Apache-2.0  | https://github.com/docker/cli |
+| containerd.io | 2.2 | Apache-2.0  | https://github.com/containerd/containerd |
+| cronie-noanacron | 1.5 | MIT  | https://github.com/cronie-crond/cronie |
+
 
 ## Changelog
 All notable changes (i.e. fixes, features and breaking changes) are documented 

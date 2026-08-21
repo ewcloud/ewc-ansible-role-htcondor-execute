@@ -4,18 +4,9 @@
   changed_when: true
 
 - name: Restart HTCondor
-  when: htcondor_allow_execute_restart | default(false) | bool
-  block:
-    - name: Gracefully drain the execute node before restarting
-      ansible.builtin.command: >-
-        condor_drain -graceful
-        {{ ansible_facts['fqdn'] | default(ansible_facts['hostname']) }}
-      changed_when: true
-
-    - name: Restart the condor service
-      ansible.builtin.systemd:
-        name: condor
-        state: restarted
+  ansible.builtin.systemd:
+    name: condor
+    state: restarted
 
 - name: Reload systemd units
   ansible.builtin.systemd:
