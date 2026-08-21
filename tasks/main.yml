@@ -17,22 +17,6 @@
     fail_msg: "Input validation failed. See README.md for information on required inputs and their format."
     success_msg: "User input configuration is valid."
 
-- name: Pin package versions prior to installation
-  ansible.builtin.set_fact:
-    package_versions:
-      rockylinux_8:
-        tailscale: tailscale-1.98.9-1
-        docker-ce: docker-ce-26.1.3-1.el8
-        docker-ce-cli: docker-ce-cli-26.1.3-1.el8
-        containerd.io: containerd.io-1.6.32-3.1.el8
-        cronie-noanacron: cronie-noanacron-1.5.2-10.el8
-      rockylinux_9:
-        tailscale: tailscale-1.98.9-1
-        docker-ce: docker-ce-29.6.2-1.el9
-        docker-ce-cli: docker-ce-cli-29.6.2-1.el9
-        containerd.io: containerd.io-2.2.6-1.el9
-        cronie-noanacron: cronie-noanacron-1.5.7-16.el9
-
 - name: Gather installed package facts
   ansible.builtin.package_facts:
     manager: auto
@@ -55,9 +39,9 @@
   ansible.builtin.dnf:
     name: "{{ item }}"
     state: present
-    allow_downgrade: true
+    allow_downgrade: false
   loop:
-    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['tailscale'] }}"
+    - tailscale
 
 - name: Ensure the tailscaled service is enabled and running
   ansible.builtin.systemd:
@@ -164,9 +148,9 @@
     state: present
     allow_downgrade: true
   loop:
-    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['docker-ce'] }}"
-    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['docker-ce-cli'] }}"
-    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['containerd.io'] }}"
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
 
 - name: Create systemd drop-in directory for docker.socket
   ansible.builtin.file:
@@ -176,7 +160,7 @@
     group: root
     mode: "0755"
 
-- name: Create directory for Harbor auth token storage
+- name: Create directory for docker auth token storage
   ansible.builtin.file:
     path: /var/lib/condor/.docker
     state: directory
@@ -243,7 +227,7 @@
     state: present
     allow_downgrade: true
   loop:
-    - "{{ package_versions['rockylinux_' + ansible_facts['distribution_major_version']]['cronie-noanacron'] }}"
+    - cronie-noanacron
 
 - name: Ensure crond is enabled and started
   ansible.builtin.systemd:
@@ -284,3 +268,18 @@
       - "docker-ce-cli: {{ ansible_facts.packages['docker-ce-cli'][0].version }}-{{ ansible_facts.packages['docker-ce-cli'][0].release }}"
       - "containerd.io: {{ ansible_facts.packages['containerd.io'][0].version }}-{{ ansible_facts.packages['containerd.io'][0].release }}"
       - "cronie-noanacron: {{ ansible_facts.packages['cronie-noanacron'][0].version }}-{{ ansible_facts.packages['cronie-noanacron'][0].release }}"
+
+- name: Temporary setup Trivy for SBOM auto-generation (standalone binary file at /tmp/trivy)
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /tmp
+    creates: /tmp/trivy
+  args:
+    executable: /bin/bash
+
+- name: Auto-generate SBOM (SPDX file at /sbom.json)
+  ansible.builtin.command:
+    cmd: ./trivy rootfs --pkg-types os --format spdx-json --output /sbom.json --scanners vuln /
+    chdir: /tmp
+  changed_when: true
