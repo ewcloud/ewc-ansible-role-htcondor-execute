@@ -176,6 +176,14 @@
     group: root
     mode: "0755"
 
+- name: Create directory for Harbor auth token storage
+  ansible.builtin.file:
+    path: /var/lib/condor/.docker
+    state: directory
+    owner: condor
+    group: condor
+    recurse: true
+
 - name: Write Harbor auth token to persistent file for private docker image pulling
   ansible.builtin.template:
     src: config.json.j2
