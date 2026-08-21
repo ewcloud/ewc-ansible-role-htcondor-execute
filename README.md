@@ -5,7 +5,7 @@ This repository contains a configuration template
 to customize your environment in the
 [European Weather Cloud (EWC)](https://europeanweather.cloud/).
 The template is designed to:
-* Configure a pre-existing virtual machine, running RockyLinux version 8 or 9, and with a minimum recommended 8 CPU cores and 64GB of RAM, such that it:
+* Configure a pre-existing virtual machine, running RockyLinux version 8 or 9, and with a minimum recommended 4 CPU cores and 8GB of RAM, such that it:
     * Enables users to include their VMs into to a shared pool of HTCondor Execute nodes running within the EWC.
 
 ## Copyright and License
@@ -84,35 +84,18 @@ ansible-playbook -i inventory.yml playbook.yml
 | harbor_auth_token       | Token for authentication when pulling private container images from EWC Container registry         | `string` | n/a      |    yes   |
 
 
-## SW Bill of Materials (SBoM)
-
+## Dependencies
+> 💡 Upon execution, a SBOM (SPDX format) is auto-generated and stored in the VM's file system root directory (see `/sbom.json`).
 Third-party components used in the resulting environment.
 
-### RockyLinux 8 Environment
-
-The following components will be included in the resulting environment:
-
-| Component | Version | License | Home URL |
-|------|---------|---------|--------------|
-| tailscale | 1.98 | BSD-3-Clause | https://github.com/tailscale/tailscale |
-| htcondor | 25.x | Apache-2.0  | https://github.com/htcondor/htcondor |
-| docker-ce | 26.1 | Apache-2.0  | https://github.com/moby/moby |
-| docker-ce-cli | 26.1 | Apache-2.0  | https://github.com/docker/cli |
-| containerd.io | 1.6 | Apache-2.0  | https://github.com/containerd/containerd |
-| cronie-noanacron | 1.5 | MIT  | https://github.com/cronie-crond/cronie |
-
-### RockyLinux 9 Environment
-
-The following components will be included in the resulting environment:
-
-| Component | Version | License | Home URL |
-|------|---------|---------|--------------|
-| tailscale | 1.98 | BSD-3-Clause | https://github.com/tailscale/tailscale |
-| htcondor | 25.x | Apache-2.0  | https://github.com/htcondor/htcondor |
-| docker-ce | 29.6 | Apache-2.0  | https://github.com/moby/moby |
-| docker-ce-cli | 29.6 | Apache-2.0  | https://github.com/docker/cli |
-| containerd.io | 2.2 | Apache-2.0  | https://github.com/containerd/containerd |
-| cronie-noanacron | 1.5 | MIT  | https://github.com/cronie-crond/cronie |
+| Component |  Home URL |
+|------|---------|
+| tailscale | https://github.com/tailscale/tailscale |
+| htcondor | https://github.com/htcondor/htcondor |
+| docker-ce |  https://github.com/moby/moby |
+| docker-ce-cli | https://github.com/docker/cli |
+| containerd.io | https://github.com/containerd/containerd |
+| cronie-noanacron | https://github.com/cronie-crond/cronie |
 
 
 ## Changelog
