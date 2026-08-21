@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.1.0](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.0.0...1.1.0) (2026-08-21)
+
+
+### Features
+
+* Automated patch rollout and SBOM generation ([#2](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/issues/2)) ([8e71bc8](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/commit/8e71bc810b4d52d2a42566eb2126c7450043ee39))
+
 # 1.0.0 (2026-08-21)
 
 
