@@ -75,10 +75,7 @@
 
 - name: Enroll node into the Headscale VPN server
   ansible.builtin.command:
-    cmd: >-
-      tailscale up
-      --login-server {{ headscale_login_server }}
-      --authkey file:{{ tailscale_authkey_file }}
+    cmd: tailscale up --login-server {{ headscale_login_server }} --authkey file:{{ tailscale_authkey_file }}
   no_log: true
   changed_when: true
   when: tailscale_needs_enrollment
@@ -87,6 +84,56 @@
   ansible.builtin.file:
     path: "{{ tailscale_authkey_file }}"
     state: absent
+
+- name: Add the Docker CE yum repository definition
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Install Docker Engine
+  ansible.builtin.dnf:
+    name:
+      - "{{ item }}"
+    state: present
+    allow_downgrade: true
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+
+- name: Ensure docker service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - docker
+    - containerd
+
+- name: Check whether the isolated Docker bridge network already exists
+  ansible.builtin.command:
+    cmd: "docker network inspect {{ htcondor_docker_network_name }}"
+  register: docker_network
+  changed_when: false
+  failed_when: false
+
+- name: Create the isolated Docker bridge network for condor jobs
+  ansible.builtin.command:
+    cmd: docker network create --driver bridge -o com.docker.network.bridge.name={{ htcondor_docker_network_name }} {{ htcondor_docker_network_name }}
+  when: docker_network.rc != 0
+  changed_when: true
+
+- name: Block SSH connections originating from the condor Docker network
+  ansible.builtin.iptables:
+    chain: INPUT
+    in_interface: "{{ htcondor_docker_network_name }}"
+    protocol: tcp
+    destination_port: 22
+    jump: DROP
+  when: htcondor_docker_block_ssh | bool
 
 - name: Download the HTCondor bootstrap installer
   ansible.builtin.get_url:
@@ -133,93 +180,57 @@
     mode: "0644"
   notify: Restart HTCondor
 
-- name: Add the Docker CE yum repository definition
-  ansible.builtin.get_url:
-    url: https://download.docker.com/linux/centos/docker-ce.repo
-    dest: /etc/yum.repos.d/docker-ce.repo
-    mode: "0644"
-    owner: root
-    group: root
-
-- name: Install Docker Engine
-  ansible.builtin.dnf:
-    name:
-      - "{{ item }}"
-    state: present
-    allow_downgrade: true
-  loop:
-    - docker-ce
-    - docker-ce-cli
-    - containerd.io
-
-- name: Create systemd drop-in directory for docker.socket
+- name: Create directory for Docker auth token storage
   ansible.builtin.file:
-    path: /etc/systemd/system/docker.socket.d
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Create directory for docker auth token storage
-  ansible.builtin.file:
-    path: /var/lib/condor/.docker
+    path: "{{ docker_auth_token_path }}"
     state: directory
     owner: condor
     group: condor
     recurse: true
 
-- name: Write Harbor auth token to persistent file for private docker image pulling
+- name: Create directory for Apptainer auth token storage
+  ansible.builtin.file:
+    path: "{{ apptainer_auth_token_path }}"
+    state: directory
+    owner: condor
+    group: condor
+    recurse: true
+
+- name: Write auth token to persistent file for Docker private image pulling
   ansible.builtin.template:
     src: config.json.j2
-    dest: "{{ harbor_auth_token_file }}"
+    dest: "{{ docker_auth_token_path }}/config.json"
     owner: condor
     group: condor
     mode: "0644"
 
-- name: Grant the condor group access to the Docker socket
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/docker.socket.d/override.conf
-    content: |
-      [Socket]
-      SocketGroup=condor
-    owner: root
-    group: root
+- name: Write auth token to persistent file for Apptainer private image pulling
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ apptainer_auth_token_path }}/config.json"
+    owner: condor
+    group: condor
     mode: "0644"
+
+- name: Grant the condor user access to the Docker socket
+  ansible.builtin.user:
+    name: condor
+    groups: docker
+    append: true
   notify:
     - Reload systemd units
     - Restart docker
+    - Restart HTCondor
 
-- name: Ensure docker service is enabled and started
-  ansible.builtin.systemd:
-    name: "{{ item }}"
-    enabled: true
-    state: started
-  loop:
-    - docker
-    - containerd
-
-- name: Check whether the isolated Docker bridge network already exists
-  ansible.builtin.command: "docker network inspect {{ htcondor_docker_network_name }}"
-  register: docker_network
-  changed_when: false
-  failed_when: false
-
-- name: Create the isolated Docker bridge network for condor jobs
-  ansible.builtin.command: >-
-    docker network create --driver bridge
-    -o com.docker.network.bridge.name={{ htcondor_docker_network_name }}
-    {{ htcondor_docker_network_name }}
-  when: docker_network.rc != 0
-  changed_when: true
-
-- name: Block SSH connections originating from the condor Docker network
-  ansible.builtin.iptables:
-    chain: INPUT
-    in_interface: "{{ htcondor_docker_network_name }}"
-    protocol: tcp
-    destination_port: 22
-    jump: DROP
-  when: htcondor_docker_block_ssh | bool
+- name: Grant the nobody user access to the Docker socket
+  ansible.builtin.user:
+    name: nobody
+    groups: docker
+    append: true
+  notify:
+    - Reload systemd units
+    - Restart docker
+    - Restart HTCondor
 
 - name: Install cron for scheduled Docker cleanup
   ansible.builtin.dnf:

@@ -10,4 +10,5 @@ htcondor_slot_type_1_share: "100%"
 htcondor_slot_type_1_partitionable: true
 htcondor_docker_network_name: condor_network
 htcondor_docker_block_ssh: true
-harbor_auth_token_file: /var/lib/condor/.docker/config.json
+docker_auth_token_path: /var/lib/condor/.docker
+apptainer_auth_token_path: /.docker
