@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.2.0](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.1.0...1.2.0) (2026-08-27)
+
+
+### Features
+
+* Enable Apptainer to also pull from private registry ([#3](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/issues/3)) ([eb3ddfa](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/commit/eb3ddfa6dbedbccaec7c296ae033faada9bce3ff))
+
 # [1.1.0](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.0.0...1.1.0) (2026-08-21)
 
 
