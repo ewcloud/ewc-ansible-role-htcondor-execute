@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.2.1](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.2.0...1.2.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* Correct Ansible Galaxy metadata filename ([#4](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/issues/4)) ([e7bf3f3](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/commit/e7bf3f3f84df27883d8f60bf9847fca320fb2207))
+
 # [1.2.0](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.1.0...1.2.0) (2026-08-27)
 
 
