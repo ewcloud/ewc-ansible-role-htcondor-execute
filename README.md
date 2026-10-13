@@ -43,7 +43,7 @@ to reach the virtual machine you wish to configure:
 ---
 ewcloud:
   hosts:
-    htc_execute:
+    htc-execute:
       ansible_python_interpreter: auto
       ansible_host: <add the IP address of the target host>
       ansible_ssh_private_key_file: <add the path to local SSH private key file>
@@ -83,7 +83,7 @@ ansible-playbook -i inventory.yml playbook.yml
 | htcondor_password           | Password to authenticate against HTCondor Execute node pool                                        | `string` | n/a      |    yes   |
 | htcondor_reinstall          | Force HTCondor re-install. Only `yes` will be accepted to approve                                  | `string` | `no`     |    no    |
 | harbor_auth_token           | Token for authentication when pulling private container images from EWC Container registry         | `string` | n/a      |    yes   |
-
+| tenancy_name                | Tenancy name for target instance fully qualified domain name assignment                            | `string` | n/a      |    yes   |
 
 ## Dependencies
 > 💡 Upon execution, a SBOM (SPDX format) is auto-generated and stored in the VM's file system root directory (see `/sbom.json`).
