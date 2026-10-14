@@ -5,3 +5,5 @@ htcondor_cm_external_ip: null
 htcondor_password: null
 htcondor_reinstall: false
 harbor_auth_token: null
+harbor_server: null
+tenancy_name: null
