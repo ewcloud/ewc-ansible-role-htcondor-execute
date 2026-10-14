@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file. See
 [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.4.0](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.3.0...1.4.0) (2026-10-14)
+
+
+### Features
+
+* User-defined Harbor URI and target vm fully qualified domain name ([#6](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/issues/6)) ([06d6c11](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/commit/06d6c11c5c65465270a08d8c091475f38329527d))
+
 # [1.3.0](https://github.com/ewcloud/ewc-ansible-role-htcondor-execute/compare/1.2.1...1.3.0) (2026-10-13)
 
 
