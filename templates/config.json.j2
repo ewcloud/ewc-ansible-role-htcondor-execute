@@ -1,6 +1,6 @@
 {
   "auths": {
-    "harbor-pilot.eumetsat.europeanweather.cloud": {
+    "{{ harbor_server | regex_replace('^https://', '') }}": {
       "auth": "{{ harbor_auth_token }}"
     }
   }
