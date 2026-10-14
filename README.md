@@ -43,7 +43,7 @@ to reach the virtual machine you wish to configure:
 ---
 ewcloud:
   hosts:
-    htc-execute:
+    htc_execute:
       ansible_python_interpreter: auto
       ansible_host: <add the IP address of the target host>
       ansible_ssh_private_key_file: <add the path to local SSH private key file>
